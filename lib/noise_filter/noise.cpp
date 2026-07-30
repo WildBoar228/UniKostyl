@@ -55,7 +55,7 @@ extern "C" {
     // f[L][A][B]: whether this color must be removed
     // thr: source thresholds
     // S: compression strength
-    Thresholds_t remove_noise(bool(&f)[101][256][256], Thresholds_t& thr, int S = 1) {
+    Thresholds_t remove_noise(bool(&f)[101][256][256], Thresholds_t thr, int S = 1) {
         int Lmin = thr.Lmin;
         int Lmax = thr.Lmax;
         int Amin = thr.Amin;
