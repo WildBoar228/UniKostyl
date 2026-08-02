@@ -1,10 +1,9 @@
 import io, pygame, sys, time, ctypes
 from PIL import Image, ImageOps
 import numpy as np
-# from skimage.color import rgb2lab
 from widgets import *
 import cv2
-from os import path
+from pathlib import Path
 
 
 class Thresholds_t(ctypes.Structure):
@@ -16,7 +15,13 @@ class Thresholds_t(ctypes.Structure):
                 ("Bmax", ctypes.c_int)]
 
 
-noise_lib = ctypes.CDLL("lib/noise_filter/noise_mint22.dll")
+noise_lib_path = Path("lib/noise_filter")
+if "win" in sys.platform.lower():
+    noise_lib_path = noise_lib_path / "noise.dll"
+else:
+    noise_lib_path = noise_lib_path / "noise.so"
+
+noise_lib = ctypes.CDLL(noise_lib_path)
 noise_lib.remove_noise.restype = Thresholds_t
 LAB_type = ((ctypes.c_bool * 256) * 256) * 101
 
