@@ -16,7 +16,7 @@ class Thresholds_t(ctypes.Structure):
                 ("Bmax", ctypes.c_int)]
 
 
-noise_lib = ctypes.CDLL(path.join(path.dirname(__file__), "lib/noise_filter/noise.dll"))
+noise_lib = ctypes.CDLL("lib/noise_filter/noise_mint22.dll")
 noise_lib.remove_noise.restype = Thresholds_t
 LAB_type = ((ctypes.c_bool * 256) * 256) * 101
 
@@ -95,16 +95,6 @@ def threshold_sum(thr1, thr2):
 
 
 def threshold_diff(thr1, rect, pixels):
-    # thr2 = threshold_from_area(rect, pixels)
-    # thr = np.array(thr1)
-    # thr[0] = max(thr1[0], thr2[0])
-    # thr[1] = min(thr1[1], thr2[1])
-    # thr[2] = max(thr1[2], thr2[2])
-    # thr[3] = min(thr1[3], thr2[3])
-    # thr[4] = max(thr1[4], thr2[4])
-    # thr[5] = min(thr1[5], thr2[5])
-    # return thr
-
     thr = Thresholds_t(int(thr1[0]),
                        int(thr1[1]),
                        int(thr1[2]) + 128,
@@ -127,7 +117,10 @@ def threshold_diff(thr1, rect, pixels):
                     #print(f'strike out:  {l} {a} {b}')
                     colorspace[l][a][b] = 1
     
-    time_complexity = (thr1[1] - thr1[0] + 1) ** 2 * (thr1[3] - thr1[2] + 1) * (thr1[5] - thr1[4] + 1)
+    time_complexity = (
+        int(thr1[1] - thr1[0] + 1)**2 * 
+        int(thr1[3] - thr1[2] + 1) * 
+        int(thr1[5] - thr1[4] + 1))
     print(f'time_complexity:   {time_complexity}, s = {1 if time_complexity < 1e7 else 2}')
 
     print(thr1, end=' -> ')
@@ -170,6 +163,14 @@ def set_pause():
         widgets['btn_pause'].label.text = '>'
 
 
+def enable_blobs():
+    global are_blobs_enabled
+    are_blobs_enabled = not are_blobs_enabled
+    widgets['btn_blobs'].label.text = '-Blobs' if are_blobs_enabled else '+Blobs'
+    if update_settings_callback is not None and callable(update_settings_callback):
+        update_settings_callback()
+
+
 pygame.init()
 screen_w = 1280
 screen_h = 600
@@ -202,6 +203,7 @@ pixels = np.array([])
 pixels_processed = np.array([])
 process_mode = 'Bitmap'
 is_pause = False
+are_blobs_enabled = False
 
 
 def backup_thresholds():
@@ -349,12 +351,21 @@ widgets = {'img_src': ImageNumpy(screen, pygame.Rect(20, 60, 320, 240), source=p
 
                                      padding_x=60),
 
-           'btn_save': Button(screen, pygame.Rect(800, 400, 150, 40),
+            'btn_save': Button(screen, pygame.Rect(800, 400, 150, 40),
                               label=Label(screen, pygame.Rect(800, 400, 150, 40),
                                             text='Save', color=(255, 255, 255),
                                             font=pygame.font.Font(None, 40),
                                             stratch=True),
                                 func=save_to_cam,
+                                colors={'normal': (0, 0, 0),
+                                        'pressed': (100, 100, 100)}),
+            
+            'btn_blobs': Button(screen, pygame.Rect(800, 300, 150, 40),
+                              label=Label(screen, pygame.Rect(800, 300, 150, 40),
+                                            text='+Blobs', color=(255, 255, 255),
+                                            font=pygame.font.Font(None, 40),
+                                            stratch=True),
+                                func=enable_blobs,
                                 colors={'normal': (0, 0, 0),
                                         'pressed': (100, 100, 100)}),
             
@@ -384,12 +395,21 @@ except FileNotFoundError as exc:
 
 set_thr_to_sliders()
 
+
+save_to_camera_callback = None
+update_settings_callback = None
+
+
+save_to_camera_callback = None
+update_settings_callback = None
+
 save_to_camera_callback = None
 
 def save_to_camera():
     global save_thr
     global thresholds  
     global save_to_camera_callback 
+    print("dfgdfghfh")
     save_thr = False
 
     if isinstance(thresholds, (np.ndarray, np.generic)):  # проверка, что это numpy массив

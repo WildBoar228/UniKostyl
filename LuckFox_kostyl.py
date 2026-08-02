@@ -6,8 +6,11 @@ import unikostyl
 import cv2 as cv
 import numpy as np
 import time
+import requests
+import json
 
 url = 'rtsp://172.32.0.93/live/0' # Замените на ваш URL
+POST_SETTINGS_URL = 'http://172.32.0.93:8000'
 
 cap = cv.VideoCapture(url)
 
@@ -27,9 +30,21 @@ def update_frame():
 
 def after_save(tresholds):
     print("after_save called\n")
-    result = subprocess.run(["adb", "push", "thresholds.txt", "/userdata"], capture_output=True)
-    if result.returncode != 0:
-        print(f"Ошибка adb push: {result.stderr.decode()}")
+
+    data = {
+        "draw_blobs": unikostyl.are_blobs_enabled,
+        "thresholds": tresholds
+    }
+
+    print("POST")
+    response = requests.post(POST_SETTINGS_URL, json=data)
+    if response.status_code != 200:
+        print(f"POST error: {response.status_code}")
+
+    # result = subprocess.run(["adb", "push", "thresholds.txt", "/userdata"], capture_output=True)
+    # if result.returncode != 0:
+    #     print(f"Ошибка adb push: {result.stderr.decode()}")
+
 
 start_time = time.time()
 x = 1 # displays the frame rate every 1 second
