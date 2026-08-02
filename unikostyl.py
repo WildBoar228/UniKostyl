@@ -15,13 +15,13 @@ class Thresholds_t(ctypes.Structure):
                 ("Bmax", ctypes.c_int)]
 
 
-noise_lib_path = Path("lib/noise_filter")
+noise_lib_path = Path(__file__).resolve().parent / "lib" / "noise_filter"
 if "win" in sys.platform.lower():
     noise_lib_path = noise_lib_path / "noise.dll"
 else:
     noise_lib_path = noise_lib_path / "noise.so"
 
-noise_lib = ctypes.CDLL(noise_lib_path)
+noise_lib = ctypes.CDLL(str(noise_lib_path))
 noise_lib.remove_noise.restype = Thresholds_t
 LAB_type = ((ctypes.c_bool * 256) * 256) * 101
 
