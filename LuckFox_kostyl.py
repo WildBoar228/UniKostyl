@@ -41,7 +41,7 @@ def main_loop():
     global start_time
     global input_frame
 
-    unikostyl.save_to_camera_callbeck = after_save
+    unikostyl.save_to_camera_callback = after_save
 
     while(True):
         counter+=1
