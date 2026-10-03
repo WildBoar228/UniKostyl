@@ -25,6 +25,7 @@ def update_frame():
         raise ValueError("No camera")
     
     # print("Frame shape:", frame.shape)
+    frame = cv.transpose(frame)  # swap x and y axes
     input_frame = cv.resize(cv.cvtColor(frame, cv.COLOR_BGR2RGB), (240, 320), interpolation=cv.INTER_CUBIC)
 
 

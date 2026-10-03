@@ -178,8 +178,8 @@ def enable_blobs():
 
 pygame.init()
 screen_w = 1280
-screen_h = 600
-screen = pygame.display.set_mode((screen_w, screen_h))
+screen_h = 720
+screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
 
 pygame.display.set_caption("OpenKostyl")
 clock = pygame.time.Clock()
@@ -389,6 +389,82 @@ bg_names = ['bg_slider_L_low', 'bg_slider_L_high',
             'bg_slider_A_low', 'bg_slider_A_high',
             'bg_slider_B_low', 'bg_slider_B_high',]
 
+
+# --- ВЕРСТКА ВИДЖЕТОВ (дизайн как в unikostyl2.py) ---
+# Функционал не менялся, только расположение.
+def update_all_widgets():
+    global screen_w, screen_h, widgets, screen
+    if screen_w < 100 or screen_h < 100:
+        return
+
+    margin = 30
+    top_y = 15
+    btn_h = 35
+
+    def sync_btn(name, x, y, w, h):
+        widgets[name].rect = pygame.Rect(x, y, w, h)
+        if hasattr(widgets[name], 'label') and widgets[name].label is not None:
+            widgets[name].label.rect = widgets[name].rect
+
+    # 1. ТОП: селектор R/+/- и режимы Bitmap/L/A/B + пауза
+    widgets['itemlist_select'].rect = pygame.Rect(margin, top_y, 160, btn_h)
+    for i, item in enumerate(widgets['itemlist_select'].items):
+        item.rect = pygame.Rect(margin + i * 55, top_y, 50, btn_h)
+
+    mode_x = margin + 180
+    sync_btn('btn_bitmap', mode_x, top_y, 90, btn_h)
+    sync_btn('btn_l', mode_x + 100, top_y, 40, btn_h)
+    sync_btn('btn_a', mode_x + 150, top_y, 40, btn_h)
+    sync_btn('btn_b', mode_x + 200, top_y, 40, btn_h)
+    sync_btn('btn_pause', mode_x + 260, top_y, 50, btn_h)
+
+    # 2. КАМЕРЫ (слева): два вида 4:3 горизонтально, максимально вписанные
+    # Верхнее выравнивание сохранено (v_y фиксирован), пустая полоса остается снизу.
+    v_y = top_y + btn_h + 20
+    gap = 6
+    max_v_w = (screen_w - (margin * 2) - 250) // 2
+    max_v_h = int(screen_h * 0.65)
+    vw = min(max_v_w, int(max_v_h * 4 / 3))
+    vh = int(vw * 3 / 4)
+
+    x_left = margin
+    x_right = x_left + vw + gap
+    widgets['img_src'].rect = pygame.Rect(x_left, v_y, vw, vh)
+    widgets['img_proc'].rect = pygame.Rect(x_right, v_y, vw, vh)
+    widgets['label_coords'].rect = pygame.Rect(x_left, v_y + vh + 5, 0, 0)
+    widgets['label_mode'].rect = pygame.Rect(x_right, v_y + vh + 5, 0, 0)
+
+    # 3. ТРЕШХОЛДЫ (низ, в две колонки)
+    list_y = screen_h - 80
+    col_text_w = 400
+    for i, item in enumerate(widgets['itemlist_thr'].items):
+        if i < 2:
+            item.rect = pygame.Rect(margin, list_y + i * 20, col_text_w, 20)
+        else:
+            item.rect = pygame.Rect(
+                margin + col_text_w + 30, list_y + (i - 2) * 20, col_text_w, 20
+            )
+    widgets['itemlist_thr'].rect = pygame.Rect(margin, list_y, col_text_w * 2 + 30, 60)
+
+    # 4. СЛАЙДЕРЫ (низ, три колонки L/A/B)
+    s_y = list_y - 50
+    col_w = (screen_w - (margin * 2) - 100) // 3
+    for i, char in enumerate(['L', 'A', 'B']):
+        x_start = margin + i * (col_w + 45)
+        widgets[f'label_{char}'].rect = pygame.Rect(x_start, s_y - 25, 0, 0)
+        for suffix, y_off in [('low', 0), ('high', 20)]:
+            s_name = f'slider_{char}_{suffix}'
+            bg_name = f'bg_slider_{char}_{suffix}'
+            widgets[s_name].borders = (x_start, x_start + col_w)
+            widgets[s_name].rect.y = s_y + y_off - 10
+            widgets[s_name].rect.height = 20
+            widgets[bg_name].rect = pygame.Rect(x_start, s_y + y_off - 10, col_w, 20)
+            widgets[s_name].set_value(widgets[s_name].value)
+
+    # 5. Кнопки справа внизу (Save + Blobs — функционал unikostyl.py сохранен)
+    sync_btn('btn_save', screen_w - 130 - 20, screen_h - 40 - 10, 130, 40)
+    sync_btn('btn_blobs', screen_w - 130 - 20, screen_h - 40 - 10 - 50, 130, 40)
+
 keys = {}
 press_pos = (-1, -1)
 
@@ -399,6 +475,7 @@ except FileNotFoundError as exc:
     pass
 
 set_thr_to_sliders()
+update_all_widgets()
 
 
 save_to_camera_callback = None
@@ -437,6 +514,7 @@ def main_loop_frame(image_pixels: np.array):
     global thr_buffer
     global save_thr
     global take_thr_from_cam
+    global screen_w, screen_h, screen
 
     sys.stdout.flush()
     
@@ -460,6 +538,13 @@ def main_loop_frame(image_pixels: np.array):
         if event.type == pygame.QUIT:
             pygame.quit()
             quit()
+
+        if event.type == pygame.VIDEORESIZE:
+            screen_w, screen_h = event.w, event.h
+            screen = pygame.display.set_mode((screen_w, screen_h), pygame.RESIZABLE)
+            for w in widgets.values():
+                w.screen = screen
+            update_all_widgets()
             
         if event.type == pygame.KEYDOWN:
             keys[event.key] = 1
