@@ -614,31 +614,45 @@ def main_loop_frame(image_pixels: np.array):
                 widgets[w].process_mouseup(event)
             
             if flag and widgets['img_src'].selected_area is not None:
-                rect = widgets['img_src'].selected_area.copy()
+                sel = widgets['img_src'].selected_area.copy()
+                img_r = widgets['img_src'].rect
 
-                rect.left -= widgets['img_src'].rect.left + 1
-                rect.top -= widgets['img_src'].rect.top + 1
-                # rect.width //= 2
-                # rect.height //= 2
-                # rect.left //= 2
-                # rect.top //= 2
+                # Пересчет из экранных пикселей в индексы pixels_LAB.
+                # Конвенция проекта: dim0 = X (экранная горизонталь), dim1 = Y.
+                # Без масштаба выделение брало чужую область
+                # (экран 485x363 против данных 320x240, ошибка до ~50%).
+                if img_r.width > 0 and img_r.height > 0 and pixels_LAB.size > 0:
+                    aw, ah = pixels_LAB.shape[0], pixels_LAB.shape[1]
+                    sx, sy = aw / img_r.width, ah / img_r.height
+                    lx0 = sel.left - img_r.left
+                    ly0 = sel.top - img_r.top
+                    x1 = int(max(0, lx0 * sx))
+                    y1 = int(max(0, ly0 * sy))
+                    x2 = int(min(aw - 1, (lx0 + sel.width) * sx))
+                    y2 = int(min(ah - 1, (ly0 + sel.height) * sy))
+                else:
+                    x1 = y1 = 0
+                    x2 = y2 = -1
 
-                backup_thresholds()
+                if x2 > x1 and y2 > y1:
+                    rect = pygame.Rect(x1, y1, x2 - x1, y2 - y1)
 
-                if widgets['itemlist_select'].chosen == 0:
-                    thresholds[thr_index] = list(map(int, threshold_from_area(rect, pixels_LAB).copy()))
+                    backup_thresholds()
 
-                if widgets['itemlist_select'].chosen == 1:
-                    thresholds[thr_index] = threshold_sum(thresholds[thr_index],
-                                                          list(map(int, threshold_from_area(rect, pixels_LAB).copy())))
-                    
-                if widgets['itemlist_select'].chosen == 2:
-                    thresholds[thr_index] = threshold_diff(thresholds[thr_index], rect, pixels_LAB)
-                    # thresholds[thr_index] = threshold_diff(thresholds[thr_index],
-                    #                                       list(map(int, threshold_from_area(rect, pixels_LAB).copy())))
-                thresholds[thr_index] = list(thresholds[thr_index])
+                    if widgets['itemlist_select'].chosen == 0:
+                        thresholds[thr_index] = list(map(int, threshold_from_area(rect, pixels_LAB).copy()))
 
-                set_thr_to_sliders()
+                    if widgets['itemlist_select'].chosen == 1:
+                        thresholds[thr_index] = threshold_sum(thresholds[thr_index],
+                                                              list(map(int, threshold_from_area(rect, pixels_LAB).copy())))
+
+                    if widgets['itemlist_select'].chosen == 2:
+                        thresholds[thr_index] = threshold_diff(thresholds[thr_index], rect, pixels_LAB)
+                        # thresholds[thr_index] = threshold_diff(thresholds[thr_index],
+                        #                                       list(map(int, threshold_from_area(rect, pixels_LAB).copy())))
+                    thresholds[thr_index] = list(thresholds[thr_index])
+
+                    set_thr_to_sliders()
 
         if event.type == pygame.MOUSEMOTION:
             for w in wnames[::-1]:
